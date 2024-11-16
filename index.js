@@ -12,7 +12,7 @@ app.use(cors({
 }));
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.mtdunhe.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -28,9 +28,20 @@ async function run() {
   try {
     const database = client.db("learn-live");
     const usersCollection = database.collection("users");
+    const courseCollection = database.collection('Courses')
     // get users from database
     app.get("/getUsers", async (req, res) => {
         const result = await usersCollection.find().toArray();
+        res.send(result);
+    });
+    app.get("/getAllCourses", async (req, res) => {
+        const result = await courseCollection.find().toArray();
+        res.send(result);
+    });
+    app.get("/getCourseDetails/:id", async (req, res) => {
+        const newId= req.params.id;
+        const query = { _id: new ObjectId(newId)}
+        const result = await courseCollection.findOne(query)
         res.send(result);
     });
     // Use this function to calculate Euclidean distance between two descriptors
@@ -69,7 +80,10 @@ async function run() {
     const result = await usersCollection.insertOne(person);
     res.send(result);
   });
-
+  app.post('/addCourse',async(req,res)=>{
+    const result = await courseCollection.insertOne(req.body);
+    res.send(result);
+  })
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     
