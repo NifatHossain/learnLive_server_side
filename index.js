@@ -29,6 +29,7 @@ async function run() {
     const database = client.db("learn-live");
     const usersCollection = database.collection("users");
     const courseCollection = database.collection('Courses')
+    const courseContentCollection = database.collection('courseContent')
     // get users from database
     app.get("/getUsers", async (req, res) => {
         const result = await usersCollection.find().toArray();
@@ -44,6 +45,28 @@ async function run() {
         const result = await courseCollection.findOne(query)
         res.send(result);
     });
+    app.post('/addCourseContent/:id', async (req, res) => {
+      const { lectures } = req.body;
+      const courseId = req.params.id; // `courseId` where lectures will be added
+    
+      try {
+        // Check and update or insert new course content
+        const course = await courseContentCollection.findOneAndUpdate(
+          { courseId }, // Find the document with the matching `courseId`
+          { $push: { lectures: { $each: lectures } } }, // Append new lectures to the `lectures` array
+          { new: true, upsert: true } // Create a new document if not found and return the updated document
+        );
+    
+        res.status(201).json({
+          message: "Content added successfully",
+          course,
+        });
+      } catch (error) {
+        console.error("Error saving course content:", error);
+        res.status(500).json({ message: "Error saving course content", error });
+      }
+    });
+    
     // Use this function to calculate Euclidean distance between two descriptors
   function calculateDistance(descriptor1, descriptor2) {
     return Math.sqrt(descriptor1.reduce((acc, val, i) => acc + Math.pow(val - descriptor2[i], 2), 0));
