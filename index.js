@@ -45,6 +45,12 @@ async function run() {
         const result = await courseCollection.findOne(query)
         res.send(result);
     });
+    app.get("/getCourseContents/:id", async (req, res) => {
+        const newId= req.params.id;
+        const query = { courseId: newId}
+        const result = await courseContentCollection.findOne(query)
+        res.send(result);
+    });
     app.post('/addCourseContent/:id', async (req, res) => {
       const { lectures } = req.body;
       const courseId = req.params.id; // `courseId` where lectures will be added
@@ -66,6 +72,32 @@ async function run() {
         res.status(500).json({ message: "Error saving course content", error });
       }
     });
+    app.post('/createQuiz/:id', async (req, res) => {
+      const { id } = req.params; // Fix the parameter destructuring
+      const { quizName, quizQuestions } = req.body;
+    
+      const newQuiz = {
+        quizName,
+        quizQuestions,
+      };
+    
+      try {
+        const course = await courseContentCollection.findOneAndUpdate(
+          { courseId: id }, // Match the document by courseId
+          { $push: { quizes: newQuiz } }, // Directly push the object
+          { new: true, upsert: true } // Return the updated document and create it if not found
+        );
+    
+        res.status(201).json({
+          message: "Quiz added successfully",
+          course,
+        });
+      } catch (error) {
+        console.error("Error saving Quiz:", error);
+        res.status(500).json({ message: "Error saving Quiz", error });
+      }
+    });
+    
     
     // Use this function to calculate Euclidean distance between two descriptors
   function calculateDistance(descriptor1, descriptor2) {
