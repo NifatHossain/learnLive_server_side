@@ -30,6 +30,7 @@ async function run() {
     const usersCollection = database.collection("users");
     const courseCollection = database.collection('Courses')
     const courseContentCollection = database.collection('courseContent')
+    const allResultCollection = database.collection('resultCollection')
     // get users from database
     app.get("/getUsers", async (req, res) => {
         const result = await usersCollection.find().toArray();
@@ -73,7 +74,7 @@ async function run() {
       }
     });
     app.post('/createQuiz/:id', async (req, res) => {
-      const { id } = req.params; // Fix the parameter destructuring
+      const { id } = req.params; 
       const { quizName, quizQuestions } = req.body;
     
       const newQuiz = {
@@ -135,6 +136,94 @@ async function run() {
     const result = await usersCollection.insertOne(person);
     res.send(result);
   });
+
+  app.post('/verifyFace', async (req, res) => {
+    try {
+      const { email, descriptor } = req.body;
+      const emailQuery = { email: email };
+      const userData = await usersCollection.findOne(emailQuery);
+      const tolerance = 0.6;
+  
+      if (!userData || !userData.descriptor) {
+        return res.status(404).json({ message: 'User data not found', match: null });
+      }
+  
+      const distance = calculateDistance(userData.descriptor, descriptor);
+      const isSimilarFace = distance < tolerance;
+  
+      if (isSimilarFace) {
+        return res.json({ message: 'Student is attending exam', match: true });
+      } else {
+        return res.json({ message: 'Wrong person attending exam', match: null });
+      }
+    } catch (error) {
+      console.error('Error verifying face:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
+  });
+  
+  app.post('/addSubmission/:email', async (req, res) => {
+    try {
+      const { courseId, quizName, answers, score } = req.body;
+      const email = req.params.email;
+  
+      // Step 1: Check if the result already exists in 'allResults' and update or insert
+      let result = await allResultCollection.findOne({ courseId, quizName, email });
+
+    if (result) {
+      // Update the existing document
+      await allResultCollection.updateOne(
+        { _id: result._id },
+        { $set: { answers, score } }
+      );
+    } else {
+      // Insert a new document
+      const newResult = { courseId, quizName, answers, score, email };
+      const insertResult = await allResultCollection.insertOne(newResult);
+      result = { ...newResult, _id: insertResult.insertedId };
+    }
+
+    // Step 2: Update the user's results field in 'userCollection'
+    let user = await usersCollection.findOne({ email });
+
+    if (!user) {
+      // If user does not exist, create a new user with the result ID
+      await usersCollection.insertOne({ email, results: [result._id] });
+    } else {
+      // Ensure the 'results' field exists
+      if (!Array.isArray(user.results)) {
+        user.results = [];
+      }
+
+      // Check if the result ID is already in the user's results
+      if (!user.results.some(id => id.equals(result._id))) {
+        await usersCollection.updateOne(
+          { email },
+          { $push: { results: result._id } }
+        );
+      }
+    }
+
+    
+  
+      // Send a success response with the result document
+      res.status(200).json({ message: 'Result submitted successfully', result });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'An error occurred', error });
+    }
+  });
+
+
+
+  app.get(`/getUserFaceData/:email`,async(req,res)=>{
+    const {email}=req.params;
+    const emailQuery = { email: email };
+    const existingUser = await usersCollection.findOne(emailQuery);
+    res.send(existingUser)
+
+  })
+
   app.post('/addCourse',async(req,res)=>{
     const result = await courseCollection.insertOne(req.body);
     res.send(result);
