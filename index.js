@@ -1,14 +1,16 @@
 const express = require('express')
 const app = express()
 var cors = require('cors')
-const port = 5000
+const port = process.env.PORT || 5000;
 app.use(express.json());
 require('dotenv').config();
 
 app.use(cors({
     origin:[
         "http://localhost:5173",
-    ]
+        "https://learnlive1.netlify.app",
+    ],
+    credentials: true
 }));
 
 
@@ -117,7 +119,7 @@ async function run() {
     }
 
     // Check if face descriptor matches any existing descriptors
-    const tolerance = 0.6; // Adjust this as needed
+    const tolerance = 0.5; // Adjust this as needed
     const allUsers = await usersCollection.find().toArray();
 
     const isDuplicate = allUsers.some(user => {
@@ -142,7 +144,7 @@ async function run() {
       const { email, descriptor } = req.body;
       const emailQuery = { email: email };
       const userData = await usersCollection.findOne(emailQuery);
-      const tolerance = 0.6;
+      const tolerance = 0.5;
   
       if (!userData || !userData.descriptor) {
         return res.status(404).json({ message: 'User data not found', match: null });
