@@ -119,7 +119,7 @@ async function run() {
     }
 
     // Check if face descriptor matches any existing descriptors
-    const tolerance = 0.5; // Adjust this as needed
+    const tolerance = 0.4; // Adjust this as needed
     const allUsers = await usersCollection.find().toArray();
 
     const isDuplicate = allUsers.some(user => {
@@ -144,7 +144,7 @@ async function run() {
       const { email, descriptor } = req.body;
       const emailQuery = { email: email };
       const userData = await usersCollection.findOne(emailQuery);
-      const tolerance = 0.5;
+      const tolerance = 0.4;
   
       if (!userData || !userData.descriptor) {
         return res.status(404).json({ message: 'User data not found', match: null });
